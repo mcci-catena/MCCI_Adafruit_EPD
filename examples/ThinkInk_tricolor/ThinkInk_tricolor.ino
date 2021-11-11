@@ -8,12 +8,28 @@
  ****************************************************/
 
 #include "Adafruit_ThinkInk.h"
+#include <Catena.h>
 
-#define EPD_DC      10 // can be any pin, but required!
-#define EPD_CS      9  // can be any pin, but required!
-#define EPD_BUSY    7  // can set to -1 to not use a pin (will wait a fixed delay)
-#define SRAM_CS     6  // can set to -1 to not use a pin (uses a lot of RAM!)
-#define EPD_RESET   8  // can set to -1 and share with chip Reset (can't deep sleep)
+using namespace McciCatena;
+
+#define EPD_DC      A1 // can be any pin, but required!
+#define EPD_CS      A2 // can be any pin, but required!
+#define EPD_BUSY    D5 // can set to -1 to not use a pin (will wait a fixed delay)
+#define SRAM_CS     -1 // can set to -1 to not use a pin (uses a lot of RAM!)
+#define EPD_RESET   -1 // can set to -1 and share with chip Reset (can't deep sleep)
+
+#define BUTTON_A  D1
+#define BUTTON_B  D12
+#define BUTTON_C  D0
+
+// on the 4612, we need a SPI class, because this is on gSPI2
+/* instantiate SPI */
+SPIClass gSPI2(
+                Catena::PIN_SPI2_MOSI,
+                Catena::PIN_SPI2_MISO,
+                Catena::PIN_SPI2_SCK
+                );
+
 
 // 1.54" 152x152 Tricolor EPD with ILI0373 chipset
 //ThinkInk_154_Tricolor_Z17 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
@@ -37,7 +53,8 @@
 //ThinkInk_270_Tricolor_Z70 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
 // 2.9" Tricolor Featherwing or Breakout with IL0373 chipset
-ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
+ThinkInk_290_Tricolor_Z10 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY, &gSPI2);
+
 // 2.9" Tricolor Featherwing or Breakout with UC8151D chipset
 //ThinkInk_290_Tricolor_Z13 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY);
 
@@ -49,8 +66,34 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) { delay(10); }
   Serial.println("Adafruit EPD full update test in red/black/white");
+
+  gSPI2.begin();
+
+  // turn off the flash CS
+  pinMode(Catena::PIN_SPI2_FLASH_SS, OUTPUT);
+  digitalWrite(Catena::PIN_SPI2_FLASH_SS, 1);
+
   display.begin(THINKINK_TRICOLOR);
+
+  pinMode(BUTTON_A, INPUT_PULLUP);
+  pinMode(BUTTON_B, INPUT_PULLUP);
+  pinMode(BUTTON_C, INPUT_PULLUP);
+  checkButton(BUTTON_A, 'A');
+  checkButton(BUTTON_B, 'B');
+  checkButton(BUTTON_C, 'C');
 }
+
+void checkButton(int8_t buttonPin, char buttonChar)
+  {
+  Serial.print("Press button "); Serial.print(buttonChar); Serial.print(": ");
+  while (digitalRead(buttonPin) == 1)
+    ;
+  Serial.println("OK");
+  Serial.print("Release button "); Serial.print(buttonChar); Serial.print(": ");
+  while (digitalRead(buttonPin) == 0)
+    ;
+  Serial.println("OK");
+  }
 
 void loop() {
   Serial.println("Banner demo");
